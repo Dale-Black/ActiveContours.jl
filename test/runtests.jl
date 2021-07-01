@@ -1,6 +1,3 @@
-using ActiveContours
-using Test
+include("./imports.jl")
 
-@testset "ActiveContours.jl" begin
-    # Write your tests here.
-end
+include("initialization.jl")
