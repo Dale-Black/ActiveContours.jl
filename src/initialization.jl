@@ -119,7 +119,7 @@ else
 function to_array(image_shape, E::Ellipsoid)
     B = box_approximation(E)
     Bs = split(B, collect(image_shape))
-    res = [center(Bi) in e for Bi in Bs]
+    res = [center(Bi) in E for Bi in Bs]
     M = reshape(res, image_shape)
     return M
 end

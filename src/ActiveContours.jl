@@ -1,6 +1,7 @@
 module ActiveContours
 
 using LazySets
+using LinearAlgebra
 
 include("./initialization.jl")
 include("./morphological_snakes.jl")
