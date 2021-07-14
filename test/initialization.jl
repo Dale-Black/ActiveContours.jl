@@ -140,7 +140,7 @@ end
             0 0 1 1 1 1 1 1 0 0
             0 0 0 0 0 0 0 0 0 0
         ]
-        answer = cat(a1, a2, dims=3)
+        answer = cat(a1, a2; dims=3)
         ellipse = LazySets.Ellipsoid([5.0, 5.0, 1.0], Diagonal([25.0, 25.0, 1.0]))
         test = to_array(image_shape, ellipse)
         @test test == answer
