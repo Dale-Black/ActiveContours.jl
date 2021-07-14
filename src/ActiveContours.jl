@@ -10,5 +10,8 @@ export
     # Export initialization.jl functions
     ellipsoid_level_set,
     lazy_ellipsoid_level_set,
-    to_array
+    to_array,
+
+    # Export utils.jl functions
+    central_diff
 end
