@@ -9,3 +9,5 @@ function central_diff(u)
 
     return a, b
 end
+
+normalize(img) = (img .- minimum(img)) ./ (maximum(img) .- minimum(img))

@@ -14,5 +14,6 @@ export
     to_array,
 
     # Export utils.jl functions
-    central_diff
+    central_diff,
+    normalize
 end
