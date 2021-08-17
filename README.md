@@ -6,3 +6,8 @@
 [![Coverage](https://codecov.io/gh/Dale-Black/ActiveContours.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/Dale-Black/ActiveContours.jl)
 
 Image Segmentation library via active contours
+
+## Main Approaches
+1. Parametric active contours (snakes)
+2. Geometric active contours (curve evolution)
+3. Implicit active contours (level sets)
