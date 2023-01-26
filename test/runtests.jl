@@ -1,3 +1,1 @@
-include("./imports.jl")
-
-include("initialization.jl")
+include("../src/chanvese_py.jl")

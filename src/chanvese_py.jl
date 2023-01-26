@@ -171,8 +171,7 @@ md"""
 """
 
 # ╔═╡ 6b3bc657-f7a5-49f6-a4b5-d6a941905d6d
-function chan_vese(image; mu=0.25, lambda1=1, lambda2=1, tol=1e-3, max_iter=500, dt=0.5)
-    phi = init_checkerboard(size(image), 5)
+function chan_vese(image, phi; mu=0.25, lambda1=1, lambda2=1, tol=1e-3, max_iter=500, dt=0.5)
     image = image .- minimum(image)
     if maximum(image) != 0
         image = image ./ maximum(image)
@@ -254,7 +253,8 @@ end
 
 # ╔═╡ aed2424b-4e9c-4b1f-b802-9b858558516a
 let
-	segmentation, phi, energies = chan_vese(test_image; max_iter=200);
+    phi = init_checkerboard(size(test_image), 5)
+	segmentation, phi, energies = chan_vese(test_image, phi; max_iter=200);
 	ans = [
 		 1  1  1  1  0  0  0  0  0  0
 		 1  1  1  1  0  0  0  0  0  0
