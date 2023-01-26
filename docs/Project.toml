@@ -1,0 +1,8 @@
+[deps]
+ActiveContours = "2a096b4a-7755-4b95-b585-0f276b139faf"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+TestImages = "5e47fb64-e119-507b-a336-dd2b206d9990"

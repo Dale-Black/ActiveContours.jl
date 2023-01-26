@@ -1,370 +1,8 @@
-### A Pluto.jl notebook ###
-# v0.19.18
-
-using Markdown
-using InteractiveUtils
-
-# ╔═╡ 68b85236-14eb-42ff-bbb7-3e21807ecec0
-using Images, TestImages, PlutoUI, Statistics, CairoMakie
-
-# ╔═╡ 6a1bb0eb-6a7c-442a-a386-7f7ea1640f0b
-TableOfContents()
-
-# ╔═╡ 598c7ac2-b30e-46c0-ae48-9a88976fd691
-md"""
-## Load image
-"""
-
-# ╔═╡ e7f68608-2fff-418c-87fa-a4d1272fef07
-begin
-	img = load("/Users/daleblack/Google Drive/dev/julia/ActiveContours/images/blobs.png")
-	img = convert(Array{Float64}, Gray.(img))
-end
-
-# ╔═╡ e055d951-9cbd-45ee-acc9-ad1d61a0c4d0
-md"""
-# Python chan vese approach
-"""
-
-# ╔═╡ 117afcfd-6c59-4b07-a5df-b56080c3a31a
-md"""
-## Add functions
-"""
-
-# ╔═╡ f71babb9-057d-4d3f-9275-093e2f613426
-md"""
-### `_cv_checkerboard`
-"""
-
-# ╔═╡ 19469875-249e-4c19-b268-59e195a72536
-function _cv_checkerboard(image_size, square_size)
-	yv = reshape(collect(range(1, image_size[1])), (image_size[1], 1))
-    xv = collect(range(1, image_size[2]))
-    sf = pi / square_size
-    xv = xv .* sf
-    yv = yv .* sf
-    return sin.(yv) .* sin.(xv)'
-end
-
-# ╔═╡ 2575d7aa-032d-405c-b004-9957013a59b1
-checker = _cv_checkerboard(size(img), 5)
-
-# ╔═╡ ad33de63-c534-46b1-8360-59e0533b7919
-heatmap(checker, colormap=:grays)
-
-# ╔═╡ 99ce3720-5664-4f86-a1bb-d4426c39ae73
-md"""
-### `_cv_curvature`
-"""
-
-# ╔═╡ d25e4a1e-339e-4c19-a75c-311b55ce747d
-function _cv_curvature(phi)
-    P = padarray(phi, Pad(:replicate, 1, 1))
-	fy = (P[2:end, 1:end-1] - P[0:end-2, 1:end-1]) / 2.0
-    fx = (P[1:end-1, 2:end] - P[1:end-1, 0:end-2]) / 2.0
-    fyy = P[2:end, 1:end-1] + P[0:end-2, 1:end-1] - 2 * phi
-    fxx = P[1:end-1, 2:end] + P[1:end-1, 0:end-2] - 2 * phi
-    fxy = 0.25 * (P[2:end, 2:end] + P[0:end-2, 0:end-2] - P[0:end-2, 2:end] - P[2:end, 0:end-2])
-    grad2 = fx.^2 + fy.^2
-	K_num = (fxx .* fy.^2 - 2 * fxy .* fx .* fy + fyy .* fx.^2)
-    K_den = (grad2 .* sqrt.(grad2) .+ 1e-8)
-	K = K_num ./ K_den
-    return K
-end
-
-# ╔═╡ 186055b7-a1d2-4026-b59a-b3b04fa931a8
-test_phi = [
-	10 -100 10 190 20
-	10 -100 10 -100 20
-	10 -100 10 -100 20
-	10 -100 10 -100 20
-	10 -100 -100 -100 20
-]
-
-# ╔═╡ 4d70d13b-72e5-4b7f-90f4-e35541833575
-_cv_curvature(test_phi)
-
-# ╔═╡ 50c7e8a0-7e49-4f7c-a1d5-c8652ba7ab8f
-md"""
-### `_cv_calculate_averages`
-"""
-
-# ╔═╡ 59fff410-28d0-408e-bbea-41a1b5f9f0a4
-"""
-	_cv_calculate_averages(image, Hphi)
-
-Returns the average values 'inside' and 'outside'.
-"""
-function _cv_calculate_averages(image, Hphi)
-    H = Hphi
-    Hinv = 1 .- H
-    Hsum = sum(H)
-    Hinvsum = sum(Hinv)
-    avg_inside = sum(image .* H)
-    avg_outside = sum(image .* Hinv)
-    if Hsum != 0
-        avg_inside /= Hsum
-    end
-    if Hinvsum != 0
-        avg_outside /= Hinvsum
-    end
-    return (avg_inside, avg_outside)
-end
-
-# ╔═╡ a7ca9a12-85d6-49e7-91f1-fff527fd8ce1
-test_Hphi = 1 * (test_phi .> 0)
-
-# ╔═╡ 19e8dcc2-c4b6-4bc6-8e46-98a9332c06a8
-test_image = [
-	10 100 -10 0 10
-	10 100 -10 0 10
-	10 100 -10 0 10
-	10 100 -10 0 10
-	10 100 -10 0 10
-]
-
-# ╔═╡ 817a7edc-2a38-4eb7-a505-5e03b5cd805e
-_cv_calculate_averages(test_image, test_Hphi)
-
-# ╔═╡ 679f3f6e-4fe8-4e40-a451-623a1e895126
-md"""
-### `_cv_delta`
-"""
-
-# ╔═╡ 95a79795-4fbc-4958-b4ec-466bcb20e3a2
-function _cv_delta(x, eps=1.0)
-    eps ./ (eps.^2 .+ x.^2)
-end
-
-# ╔═╡ bf2583f2-1301-420e-9111-eae00f870df2
-_cv_delta(test_phi)
-
-# ╔═╡ 70b28902-d2f4-43b6-9e0a-c15f21a48cc1
-md"""
-### `_cv_calculate_variation`
-"""
-
-# ╔═╡ 773e2ba2-f2f6-4e6f-8392-3dd06ea6347d
-"""
-	_cv_calculate_variation(image, phi, mu, lambda1, lambda2, dt)
-
-Returns the variation of level set 'phi' based on algorithm parameters.
-"""
-function _cv_calculate_variation(image, phi, mu, lambda1, lambda2, dt)
-    eta = 1e-16
-    P = padarray(phi, Pad(:replicate, 1, 1))
-	
-    phixp = P[1:end-1, 2:end] - P[1:end-1, 1:end-1]
-    phixn = P[1:end-1, 1:end-1] - P[1:end-1, 0:end-2]
-    phix0 = (P[1:end-1, 2:end] - P[1:end-1, 0:end-2]) / 2.0
-
-    phiyp = P[2:end, 1:end-1] - P[1:end-1, 1:end-1]
-    phiyn = P[1:end-1, 1:end-1] - P[0:end-2, 1:end-1]
-    phiy0 = (P[2:end, 1:end-1] - P[0:end-2, 1:end-1]) / 2.0
-
-    C1 = 1 ./ sqrt.(eta .+ phixp.^2 .+ phiy0.^2)
-    C2 = 1 ./ sqrt.(eta .+ phixn.^2 .+ phiy0.^2)
-    C3 = 1 ./ sqrt.(eta .+ phix0.^2 .+ phiyp.^2)
-    C4 = 1 ./ sqrt.(eta .+ phix0.^2 .+ phiyn.^2)
-
-    K = P[1:end-1, 2:end] .* C1 .+ P[1:end-1, 0:end-2] .* C2 .+ P[2:end, 1:end-1] .* C3 .+ P[0:end-2, 1:end-1] .* C4
-
-    Hphi = 1 .* (phi .> 0)
-    c1, c2 = _cv_calculate_averages(image, Hphi)
-
-    difference_from_average_term = -1 .* lambda1 .* (image .- c1).^2 .+ lambda2 .* (image .- c2).^2
-	
-    new_phi = phi + (dt*_cv_delta(phi)) .* (mu*K + difference_from_average_term)
-	
-	return new_phi ./ (1 .+ mu .* dt .* _cv_delta(phi) .* (C1+C2+C3+C4))
-end
-
-# ╔═╡ 1e568016-17ee-406a-81f4-437dc502b63e
-begin
-	test_mu = 0.25
-	test_lambda1 = 1
-	test_lambda2 = 1
-	test_dt = 0.5
-end
-
-# ╔═╡ 5a0276eb-b64c-48b8-8bd8-e1044afd7d08
-_cv_calculate_variation(test_image, test_phi, test_mu, test_lambda1, test_lambda2, test_dt)
-
-# ╔═╡ 93f0d072-9063-42f6-bc0c-e458ff436e9d
-md"""
-### `_cv_heavyside`
-"""
-
-# ╔═╡ 8ff24d32-2a61-40d1-a1bf-6535676209e0
-"""
-	_cv_heavyside(x, eps=1)
-
-Returns the result of a regularised heavyside function of the input value(s).
-"""
-function _cv_heavyside(x, eps=1)
-	return 0.5 .* (1. .+ (2 ./ pi) .* atan.(x ./ eps))
-end
-
-# ╔═╡ bb45e2e0-6108-4875-8634-37b3157cd4c8
-_cv_heavyside(test_phi)
-
-# ╔═╡ 4d566489-4c53-4dc4-b31f-31a58cabbc77
-md"""
-### `_cv_difference_from_average_term`
-"""
-
-# ╔═╡ 14c4a1be-ca7c-4cc0-89e8-0ace4c99080d
-function _cv_difference_from_average_term(image, Hphi, lambda_pos, lambda_neg)
-    c1, c2 = _cv_calculate_averages(image, Hphi)
-    Hinv = 1 .- Hphi
-    return (lambda_pos * (image .- c1) .^ 2 .* Hphi + lambda_neg * (image .- c2) .^ 2 .* Hinv)
-end
-
-# ╔═╡ c56778c4-10af-4431-a8de-43aa59fef5a0
-_cv_difference_from_average_term(test_image, test_Hphi, test_lambda1, test_lambda2)
-
-# ╔═╡ b5301e2c-db22-4376-b931-b2accb4a2efc
-md"""
-### `_cv_edge_length_term`
-"""
-
-# ╔═╡ c3c2beff-7d00-496a-8993-7c5e3de11a44
-function _cv_edge_length_term(phi, mu)
-    toret = _cv_curvature(phi)
-    return mu * toret
-end
-
-# ╔═╡ 0b4eb11c-fc17-40b3-87ec-87f64f172ef2
-_cv_edge_length_term(test_phi, test_mu)
-
-# ╔═╡ c9be9822-9f13-4e45-b2da-85f4c267f604
-md"""
-### `_cv_energy`
-"""
-
-# ╔═╡ 43d3d6d8-c195-49c0-9090-7cb6307fdaba
-function _cv_energy(image, phi, mu, lambda1, lambda2)
-    H = _cv_heavyside(phi)
-    avgenergy = _cv_difference_from_average_term(image, H, lambda1, lambda2)
-    lenenergy = _cv_edge_length_term(phi, mu)
-    return sum(avgenergy) + sum(lenenergy)
-end
-
-# ╔═╡ 34e9abff-ad47-4421-adde-ac1d991f6482
-_cv_energy(test_image, test_phi, test_mu, test_lambda1, test_lambda2)
-
-# ╔═╡ 4d88ae3d-dcda-4c4b-96b3-36797a027f21
-md"""
-## Run loop
-"""
-
-# ╔═╡ 97d9b47b-3cce-4437-bbf0-c65bf8b9453f
-begin
-	# hardcode parameters
-	mu = 0.25
-	lambda1 = 1
-	lambda2 = 1
-	dt = 0.5
-	tol=1e-3
-end
-
-# ╔═╡ d4612fe0-8125-447b-8542-54ecff4ff7a8
-function chan_vese2(image; mu=0.25, lambda1=1, lambda2=1, tol=1e-3, max_iter=500, dt=0.5)
-    phi = _cv_checkerboard(size(image), 5)
-    image = image .- minimum(image)
-    if maximum(image) != 0
-        image = image ./ maximum(image)
-    end
-    i = 0
-    old_energy = _cv_energy(image, phi, mu, lambda1, lambda2)
-    energies = []
-    phivar = tol + 1
-    segmentation = phi .> 0
-
-    while(phivar > tol && i < max_iter)
-        # Save old level set values
-        oldphi = phi
-
-        # Calculate new level set
-        phi = _cv_calculate_variation(image, phi, mu, lambda1, lambda2, dt)
-        # phi = _cv_reset_level_set(phi)
-        phivar = sqrt(mean((phi-oldphi).^2))
-
-        # Extract energy and compare to previous level set and
-        # segmentation to see if continuing is necessary
-        segmentation = phi .> 0
-        new_energy = _cv_energy(image, phi, mu, lambda1, lambda2)
-
-        # Save old energy values
-        push!(energies, old_energy)
-        old_energy = new_energy
-        i += 1
-    end
-    return (segmentation, phi, energies)
-end
-
-# ╔═╡ ec54e56d-a543-413b-8fbb-ce6eedf22edb
-segmentation, phi, energies = chan_vese2(img; max_iter=200);
-
-# ╔═╡ 69d20de2-da38-4dfe-bc2e-d765cf27f66b
-md"""
-## Visualize
-"""
-
-# ╔═╡ cc683ab4-0d3b-4cbc-914b-0545db0a84a8
-let
-	f = Figure()
-
-	ax1 = CairoMakie.Axis(
-		f[1, 1],
-		title="Original Image"
-	)
-	heatmap!(img, colormap=:grays)
-
-	ax2 = CairoMakie.Axis(
-		f[1, 2],
-		title="Final Level Set"
-	)
-	heatmap!(phi, colormap=:grays)
-
-	ax3 = CairoMakie.Axis(
-		f[2, 1],
-		title="Chan-Vese Segmentation"
-	)
-	heatmap!(segmentation, colormap=:grays)
-
-	ax4 = CairoMakie.Axis(
-		f[2, 2],
-		title="Evolution of energy"
-	)
-	lines!(Float32.(energies))
-
-	f
-end
-
-# ╔═╡ 00000000-0000-0000-0000-000000000001
-PLUTO_PROJECT_TOML_CONTENTS = """
-[deps]
-CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
-PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-TestImages = "5e47fb64-e119-507b-a336-dd2b206d9990"
-
-[compat]
-CairoMakie = "~0.10.1"
-Images = "~0.25.2"
-PlutoUI = "~0.7.49"
-TestImages = "~1.7.1"
-"""
-
-# ╔═╡ 00000000-0000-0000-0000-000000000002
-PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "c9209768cdcdb51bc25069577b4887604090a4b0"
+project_hash = "5eb7e5b3f87348f9d3ce9ac7f81c219516726711"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -382,6 +20,12 @@ version = "1.1.4"
 git-tree-sha1 = "faa260e4cb5aba097a73fab382dd4b5819d8ec8c"
 uuid = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
 version = "0.4.4"
+
+[[deps.ActiveContours]]
+deps = ["Images", "InteractiveUtils", "Markdown", "Pkg", "PlutoTest", "PlutoUI", "Revise", "Statistics"]
+path = "/Users/daleblack/Google Drive/dev/julia/ActiveContours"
+uuid = "2a096b4a-7755-4b95-b585-0f276b139faf"
+version = "0.1.0"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra"]
@@ -490,6 +134,12 @@ deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "Random", "S
 git-tree-sha1 = "64df3da1d2a26f4de23871cd1b6482bb68092bd5"
 uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 version = "0.14.3"
+
+[[deps.CodeTracking]]
+deps = ["InteractiveUtils", "UUIDs"]
+git-tree-sha1 = "0e5c14c3bb8a61b3d53b2c0620570c332c8d0663"
+uuid = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
+version = "1.2.0"
 
 [[deps.ColorBrewer]]
 deps = ["Colors", "JSON", "Test"]
@@ -1018,6 +668,12 @@ git-tree-sha1 = "b53380851c6e6664204efb2e62cd24fa5c47e4ba"
 uuid = "aacddb02-875f-59d6-b918-886e6ef4fbf8"
 version = "2.1.2+0"
 
+[[deps.JuliaInterpreter]]
+deps = ["CodeTracking", "InteractiveUtils", "Random", "UUIDs"]
+git-tree-sha1 = "72ab280d921e8a013a83e64709f66bc3e854b2ed"
+uuid = "aa1ae85d-cabe-5617-a682-6adf51b2e16a"
+version = "0.9.20"
+
 [[deps.KernelDensity]]
 deps = ["Distributions", "DocStringExtensions", "FFTW", "Interpolations", "StatsBase"]
 git-tree-sha1 = "9816b296736292a80b9a3200eb7fbb57aaa3917a"
@@ -1132,6 +788,12 @@ version = "0.3.20"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
+
+[[deps.LoweredCodeUtils]]
+deps = ["JuliaInterpreter"]
+git-tree-sha1 = "60168780555f3e663c536500aa790b6368adc02a"
+uuid = "6f1432cf-f94c-5a45-995e-cdbf5db27b0b"
+version = "2.3.0"
 
 [[deps.MIMEs]]
 git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
@@ -1372,6 +1034,12 @@ git-tree-sha1 = "daff8d21e3f4c596387867329be49b8c45f4f0f3"
 uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
 version = "1.3.3"
 
+[[deps.PlutoTest]]
+deps = ["HypertextLiteral", "InteractiveUtils", "Markdown", "Test"]
+git-tree-sha1 = "17aa9b81106e661cffa1c4c36c17ee1c50a86eda"
+uuid = "cb4044da-4d16-4ffa-a6a3-8cad7f73ebdc"
+version = "0.2.2"
+
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
 git-tree-sha1 = "eadad7b14cf046de6eb41f13c9275e5aa2711ab6"
@@ -1476,6 +1144,12 @@ deps = ["UUIDs"]
 git-tree-sha1 = "838a3a4188e2ded87a4f9f184b4b0d78a1e91cb7"
 uuid = "ae029012-a4dd-5104-9daa-d747884805df"
 version = "1.3.0"
+
+[[deps.Revise]]
+deps = ["CodeTracking", "Distributed", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "Pkg", "REPL", "Requires", "UUIDs", "Unicode"]
+git-tree-sha1 = "fd5dba2f01743555d8435f7c96437b29eae81a17"
+uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
+version = "3.5.0"
 
 [[deps.Rmath]]
 deps = ["Random", "Rmath_jll"]
@@ -1885,52 +1559,3 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "ee567a171cce03570d77ad3a43e90218e38937a9"
 uuid = "dfaa095f-4041-5dcd-9319-2fabd8486b76"
 version = "3.5.0+0"
-"""
-
-# ╔═╡ Cell order:
-# ╠═68b85236-14eb-42ff-bbb7-3e21807ecec0
-# ╠═6a1bb0eb-6a7c-442a-a386-7f7ea1640f0b
-# ╟─598c7ac2-b30e-46c0-ae48-9a88976fd691
-# ╠═e7f68608-2fff-418c-87fa-a4d1272fef07
-# ╟─e055d951-9cbd-45ee-acc9-ad1d61a0c4d0
-# ╟─117afcfd-6c59-4b07-a5df-b56080c3a31a
-# ╟─f71babb9-057d-4d3f-9275-093e2f613426
-# ╠═19469875-249e-4c19-b268-59e195a72536
-# ╠═2575d7aa-032d-405c-b004-9957013a59b1
-# ╠═ad33de63-c534-46b1-8360-59e0533b7919
-# ╟─99ce3720-5664-4f86-a1bb-d4426c39ae73
-# ╠═d25e4a1e-339e-4c19-a75c-311b55ce747d
-# ╠═186055b7-a1d2-4026-b59a-b3b04fa931a8
-# ╠═4d70d13b-72e5-4b7f-90f4-e35541833575
-# ╟─50c7e8a0-7e49-4f7c-a1d5-c8652ba7ab8f
-# ╠═59fff410-28d0-408e-bbea-41a1b5f9f0a4
-# ╠═a7ca9a12-85d6-49e7-91f1-fff527fd8ce1
-# ╠═19e8dcc2-c4b6-4bc6-8e46-98a9332c06a8
-# ╠═817a7edc-2a38-4eb7-a505-5e03b5cd805e
-# ╟─679f3f6e-4fe8-4e40-a451-623a1e895126
-# ╠═95a79795-4fbc-4958-b4ec-466bcb20e3a2
-# ╠═bf2583f2-1301-420e-9111-eae00f870df2
-# ╟─70b28902-d2f4-43b6-9e0a-c15f21a48cc1
-# ╠═773e2ba2-f2f6-4e6f-8392-3dd06ea6347d
-# ╠═1e568016-17ee-406a-81f4-437dc502b63e
-# ╠═5a0276eb-b64c-48b8-8bd8-e1044afd7d08
-# ╟─93f0d072-9063-42f6-bc0c-e458ff436e9d
-# ╠═8ff24d32-2a61-40d1-a1bf-6535676209e0
-# ╠═bb45e2e0-6108-4875-8634-37b3157cd4c8
-# ╟─4d566489-4c53-4dc4-b31f-31a58cabbc77
-# ╠═14c4a1be-ca7c-4cc0-89e8-0ace4c99080d
-# ╠═c56778c4-10af-4431-a8de-43aa59fef5a0
-# ╟─b5301e2c-db22-4376-b931-b2accb4a2efc
-# ╠═c3c2beff-7d00-496a-8993-7c5e3de11a44
-# ╠═0b4eb11c-fc17-40b3-87ec-87f64f172ef2
-# ╟─c9be9822-9f13-4e45-b2da-85f4c267f604
-# ╠═43d3d6d8-c195-49c0-9090-7cb6307fdaba
-# ╠═34e9abff-ad47-4421-adde-ac1d991f6482
-# ╟─4d88ae3d-dcda-4c4b-96b3-36797a027f21
-# ╠═97d9b47b-3cce-4437-bbf0-c65bf8b9453f
-# ╠═d4612fe0-8125-447b-8542-54ecff4ff7a8
-# ╠═ec54e56d-a543-413b-8fbb-ce6eedf22edb
-# ╟─69d20de2-da38-4dfe-bc2e-d765cf27f66b
-# ╠═cc683ab4-0d3b-4cbc-914b-0545db0a84a8
-# ╟─00000000-0000-0000-0000-000000000001
-# ╟─00000000-0000-0000-0000-000000000002
