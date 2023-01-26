@@ -1,1 +1,0 @@
-# Parametric active contours

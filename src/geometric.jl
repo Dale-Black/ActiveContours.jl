@@ -1,1 +1,0 @@
-# Curve evolution active contours
