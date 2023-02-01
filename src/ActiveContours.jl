@@ -1,6 +1,6 @@
 module ActiveContours
 
 include("./inits.jl")
-include("./chanvese_py.jl")
+include("./chanvese.jl")
 
 end
