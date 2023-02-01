@@ -1,1 +1,5 @@
-include("../src/chanvese_py.jl")
+using Test
+
+@testset "Chan Vese" begin
+    include("../src/chanvese.jl")
+end
