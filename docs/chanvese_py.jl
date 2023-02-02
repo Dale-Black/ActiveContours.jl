@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.18
+# v0.19.22
 
 using Markdown
 using InteractiveUtils
@@ -26,13 +26,16 @@ begin
 	img = convert(Array{Float64}, Gray.(img))
 end
 
+# ╔═╡ f734374a-7227-43b6-8aa5-ed1372a4c45e
+phi0 = init_checkerboard(size(img), 5)
+
 # ╔═╡ 117afcfd-6c59-4b07-a5df-b56080c3a31a
 md"""
 ## Add functions
 """
 
 # ╔═╡ ec54e56d-a543-413b-8fbb-ce6eedf22edb
-segmentation, phi, energies = chan_vese(img; max_iter=500);
+segmentation, phi, energies = chan_vese(img, phi0; max_iter=200);
 
 # ╔═╡ 69d20de2-da38-4dfe-bc2e-d765cf27f66b
 md"""
@@ -75,6 +78,7 @@ end
 # ╠═6a1bb0eb-6a7c-442a-a386-7f7ea1640f0b
 # ╟─598c7ac2-b30e-46c0-ae48-9a88976fd691
 # ╠═e7f68608-2fff-418c-87fa-a4d1272fef07
+# ╠═f734374a-7227-43b6-8aa5-ed1372a4c45e
 # ╟─117afcfd-6c59-4b07-a5df-b56080c3a31a
 # ╠═ec54e56d-a543-413b-8fbb-ce6eedf22edb
 # ╟─69d20de2-da38-4dfe-bc2e-d765cf27f66b
