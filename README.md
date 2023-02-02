@@ -3,6 +3,7 @@
 Image segmentation via active contours. 
 
 ## Goals
-[ ] - Reimplement basic PDE-based (level set) segmentation algorithm(s) from scikit-image
-[ ] - Modify these algorithms to use SciML's ecosystem where available (ModellingToolkit.jl, MOL.jl, etc)
-[ ] - Investigate how to add neural networks to these algorithms
+- [x] Reimplement basic PDE-based (level set) segmentation algorithm(s) from scikit-image
+  - [x] `src/chanvese.jl` ([Original Chan-Vese Link](https://github.com/scikit-image/scikit-image/blob/v0.19.2/skimage/segmentation/_chan_vese.py#L175-L347))
+- [ ] Modify these algorithms to use SciML's ecosystem where available (ModellingToolkit.jl, MOL.jl, etc)
+- [ ] Investigate how to add neural networks to these algorithms
