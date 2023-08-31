@@ -1,6 +1,8 @@
 module ActiveContours
+using Images, Statistics
 
 include("./inits.jl")
-include("./chanvese.jl")
+include("./chan_vese_ski.jl")
+include("./chan_vese.jl")
 
 end

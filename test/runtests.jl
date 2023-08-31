@@ -1,5 +1,4 @@
-using Test
+using Test, TestImages, ActiveContours
 
-@testset "Chan Vese" begin
-    include("../src/chanvese.jl")
-end
+include("chan_vese_ski.jl")
+include("chan_vese.jl")
