@@ -224,41 +224,41 @@ function calculate_averages(img::AbstractArray{T, N}, H𝚽::AbstractArray{S, N}
     return c₁, c₂
 end
 
-function calculate_reinitial(𝚽::AbstractArray{T, M}, 𝚿::AbstractArray{T, M}, Δt::Float64, h::Float64) where {T<:Real, M}
-    ϵ = 1e-8
-    N = ndims(𝚽)
+# function calculate_reinitial(𝚽::AbstractArray{T, M}, 𝚿::AbstractArray{T, M}, Δt::Float64, h::Float64) where {T<:Real, M}
+#     ϵ = 1e-8
+#     N = ndims(𝚽)
 
-    Δ = ntuple(d -> CartesianIndex(ntuple(i -> i == d ? 1 : 0, N)), N)
-    idx_first = first(CartesianIndices(𝚽))
-    idx_last  = last(CartesianIndices(𝚽))
+#     Δ = ntuple(d -> CartesianIndex(ntuple(i -> i == d ? 1 : 0, N)), N)
+#     idx_first = first(CartesianIndices(𝚽))
+#     idx_last  = last(CartesianIndices(𝚽))
 
-    @inbounds @simd for idx in CartesianIndices(𝚽)
-        𝚽₀  = 𝚽[idx] # 𝚽ⁿ(x, y)
-        Δ₊ = ntuple(d -> idx[d] != idx_last[d]  ? idx + Δ[d] : idx, N)
-        Δ₋ = ntuple(d -> idx[d] != idx_first[d] ? idx - Δ[d] : idx, N)
-        Δ𝚽₊ = broadcast(i -> (𝚽[i] - 𝚽₀) / h, Δ₊)
-        Δ𝚽₋ = broadcast(i -> (𝚽₀ - 𝚽[i]) / h, Δ₋)
+#     @inbounds @simd for idx in CartesianIndices(𝚽)
+#         𝚽₀  = 𝚽[idx] # 𝚽ⁿ(x, y)
+#         Δ₊ = ntuple(d -> idx[d] != idx_last[d]  ? idx + Δ[d] : idx, N)
+#         Δ₋ = ntuple(d -> idx[d] != idx_first[d] ? idx - Δ[d] : idx, N)
+#         Δ𝚽₊ = broadcast(i -> (𝚽[i] - 𝚽₀) / h, Δ₊)
+#         Δ𝚽₋ = broadcast(i -> (𝚽₀ - 𝚽[i]) / h, Δ₋)
 
-        maxΔ𝚽₊ = max.(Δ𝚽₊, 0)
-        minΔ𝚽₊ = min.(Δ𝚽₊, 0)
-        maxΔ𝚽₋ = max.(Δ𝚽₋, 0)
-        minΔ𝚽₋ = min.(Δ𝚽₋, 0)
+#         maxΔ𝚽₊ = max.(Δ𝚽₊, 0)
+#         minΔ𝚽₊ = min.(Δ𝚽₊, 0)
+#         maxΔ𝚽₋ = max.(Δ𝚽₋, 0)
+#         minΔ𝚽₋ = min.(Δ𝚽₋, 0)
 
-        G = 0
-        if 𝚽₀ > 0
-            G += sqrt(sum(max.(minΔ𝚽₊.^2, maxΔ𝚽₋.^2))) - 1
-        elseif 𝚽₀ < 0
-            G += sqrt(sum(max.(maxΔ𝚽₊.^2, minΔ𝚽₋.^2))) - 1
-        end
-        sign𝚽 = 𝚽₀ / sqrt(𝚽₀^2 + ϵ)
-        𝚿[idx] = 𝚽₀ - Δt * sign𝚽 * G
-    end
+#         G = 0
+#         if 𝚽₀ > 0
+#             G += sqrt(sum(max.(minΔ𝚽₊.^2, maxΔ𝚽₋.^2))) - 1
+#         elseif 𝚽₀ < 0
+#             G += sqrt(sum(max.(maxΔ𝚽₊.^2, minΔ𝚽₋.^2))) - 1
+#         end
+#         sign𝚽 = 𝚽₀ / sqrt(𝚽₀^2 + ϵ)
+#         𝚿[idx] = 𝚽₀ - Δt * sign𝚽 * G
+#     end
 
-    return 𝚿
-end
+#     return 𝚿
+# end
 
-function reinitialize!(𝚽::AbstractArray{T, M}, 𝚿::AbstractArray{T, M}, Δt::Float64, h::Float64, max_reiter::Int=5) where {T<:Real, M}
-    for i in 1 : max_reiter
-        𝚽 .= calculate_reinitial(𝚽, 𝚿, Δt, h)
-    end
-end
+# function reinitialize!(𝚽::AbstractArray{T, M}, 𝚿::AbstractArray{T, M}, Δt::Float64, h::Float64, max_reiter::Int=5) where {T<:Real, M}
+#     for i in 1 : max_reiter
+#         𝚽 .= calculate_reinitial(𝚽, 𝚿, Δt, h)
+#     end
+# end
