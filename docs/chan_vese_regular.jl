@@ -1,6 +1,14 @@
 ### A Pluto.jl notebook ###
 # v0.19.32
 
+#> [frontmatter]
+#> title = "Chan Vese Image Segmentation"
+#> date = "2023-12-13"
+#> description = "Image segmentation via level sets"
+#> 
+#>     [[frontmatter.author]]
+#>     name = "Dale Black"
+
 using Markdown
 using InteractiveUtils
 

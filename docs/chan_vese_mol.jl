@@ -30,9 +30,17 @@ md"""
 # Set up
 """
 
+# ╔═╡ da1aacd4-e1ae-4d2c-ac51-bb3869eecc96
+md"""
+## Package imports
+"""
+
+# ╔═╡ 0aa2b8ff-fbb1-48cf-9c44-d18eb7be2db7
+TableOfContents()
+
 # ╔═╡ 4ac09a50-0da7-4473-9f7e-9dd52046b03c
 md"""
-## Key Equations
+## Key equations
 [link](https://www.hindawi.com/journals/mpe/2013/508543/)
 
 PDE Minimizer
@@ -40,7 +48,6 @@ PDE Minimizer
 \begin{aligned}
 \frac{\partial \phi}{\partial t} &= \delta(\phi) [\nu \cdot div(\frac{\nabla \phi}{|\nabla \phi|}) - (u_0 - c_1)^2 + (u_0 - c_2)^2]
 \end{aligned}
-\tag{2}
 ```
 
 where ``\phi`` is the level set,
@@ -60,19 +67,72 @@ c_2 = \frac{\int_{\Omega} u_0 (1-H(\phi)) dx}{\int_{\Omega} (1-H(\phi)) dx}
 ```
 """
 
-# ╔═╡ d1a68855-999e-4740-87b7-f4dcc8af4982
+# ╔═╡ 47ea8adf-ade1-407b-bd24-7db3d1774fd5
 md"""
-## Imports
+# Initial arrays (`u0` and `phi0`)
 """
 
-# ╔═╡ 0aa2b8ff-fbb1-48cf-9c44-d18eb7be2db7
-TableOfContents()
+# ╔═╡ 7bc85ee9-a3ac-4b46-94a1-3bd8710afa7b
+xmin, ymin = 1, 1
 
-# ╔═╡ 560a0369-7c1b-4282-8b00-5220e38e1320
+# ╔═╡ dc2f2e91-b880-4070-8454-6305c361e681
+xmax, ymax = 100, 100
+
+# ╔═╡ ce6d3153-48f2-4b4e-ab43-5206f9e7ba6f
+md"""
+## Image (`u0`)
+"""
+
+# ╔═╡ 72ad3309-1e1c-4590-ad8d-27e71ada04d4
 begin
-	@parameters x y t
-	@variables ϕ(..)
-end;
+	u0 = convert(Array{Float64}, imresize(testimage("cameraman"), (xmax, ymax)))
+	itp_u0 = interpolate(u0, BSpline(Cubic(Line(OnGrid()))))
+	itp_u0 = scale(itp_u0, xmin:xmax, ymin:ymax)
+	u0_function(x, y) = itp_u0(x, y)
+end
+
+# ╔═╡ ad50879a-7f82-4c50-8e64-a3a8fe66ce0e
+md"""
+## Initial level set (`phi0`)
+"""
+
+# ╔═╡ 86744214-9b8f-4254-a4fe-71a5a69d8559
+function initial_level_set(shape::Tuple{Int64, Int64})
+    x₀ = reshape(collect(0:shape[begin]-1), shape[begin], 1)
+    y₀ = reshape(collect(0:shape[begin+1]-1), 1, shape[begin+1])
+    𝚽₀ = @. sin(pi / 5 * x₀) * sin(pi / 5 * y₀)
+end
+
+# ╔═╡ 694e0a90-8656-41ea-a7f1-04b9ded5a137
+begin
+	phi0 = initial_level_set((xmax, ymax))
+	itp_phi0 = interpolate(phi0, BSpline(Cubic(Line(OnGrid()))))
+	itp_phi0 = scale(itp_phi0, xmin:xmax, ymin:ymax)
+	phi0_function(x, y) = itp_phi0(x, y)
+	
+end
+
+# ╔═╡ 1efe9930-8528-4663-b01f-079b28492050
+md"""
+## Register `u0` and `phi0`
+"""
+
+# ╔═╡ 612f0dfe-3897-425d-9f92-dea8b14ee8c9
+begin
+	@register_symbolic phi0_function(x, y)
+	@register_symbolic u0_function(x, y)
+end
+
+# ╔═╡ 2135a86c-54a1-48d7-b117-798fb17fd721
+md"""
+# Equations
+"""
+
+# ╔═╡ 0e21828f-508e-4df6-aa5d-6ed3c30f52ad
+@parameters x y t
+
+# ╔═╡ 6e1cadde-29f1-4ead-9a1c-7fe8346edc1f
+@variables phi(..);
 
 # ╔═╡ 1eff178c-3fe1-4d31-9b00-dd9e2a3256f2
 begin
@@ -84,107 +144,76 @@ begin
 	Dxy = Dx * Dy
 end
 
-# ╔═╡ 90b63fc4-425d-4ec9-b92b-80cd66b75d3f
-md"""
-# Helper Functions
-"""
-
-# ╔═╡ 86744214-9b8f-4254-a4fe-71a5a69d8559
-function initial_level_set(shape::Tuple{Int64, Int64})
-    x₀ = reshape(collect(0:shape[begin]-1), shape[begin], 1)
-    y₀ = reshape(collect(0:shape[begin+1]-1), 1, shape[begin+1])
-    𝚽₀ = @. sin(pi / 5 * x₀) * sin(pi / 5 * y₀)
+# ╔═╡ ec6351d5-f501-48b5-b73a-91371d70fb05
+begin
+	Ix = Integral(x in DomainSets.ClosedInterval(xmin, x))
+	Iy = Integral(y in DomainSets.ClosedInterval(ymin, y))
 end
 
+# ╔═╡ 1b481d78-04fd-426f-ba1f-626e65326f6c
+md"""
+## Helper equations
+"""
+
 # ╔═╡ 6243e189-83be-4098-ab92-0463fede4805
-H = 1 / (1 + exp(-10 * ϕ(x, y, t)))
+H = 1 / (1 + exp(-10 * phi(x, y, t)))
 
 # ╔═╡ 3e65b52f-0486-4713-9776-cd87dbb87b33
 δ = Dt(H)
 
-# ╔═╡ 42813edf-a9e8-4e84-bf29-53e82103436d
-begin
-	∇ϕ = Symbolics.gradient(ϕ(x, y, t), [x, y])
-	∇ϕ_mag = √(∇ϕ[1] ^2 + ∇ϕ[2]^2)
-	∇ϕ_norm = ∇ϕ / ∇ϕ_mag
-	div_ϕ = Dx(∇ϕ_norm[1]) + Dy(∇ϕ_norm[2])
-end
-
-# ╔═╡ e5156d66-f984-4986-841a-fb22af019c1d
-md"""
-# PDE Setup
-"""
-
-# ╔═╡ 6a867b02-bec7-411c-8c42-c1676cc5c3b9
-md"""
-## Load Image & Setup Initial Level Set
-"""
-
-# ╔═╡ c648a4fd-a7d2-481d-8085-ce7514bd867f
-x_min, x_max = 1, 100; y_min, y_max = 1, 100
-
-# ╔═╡ e9256a34-2dee-4677-9a50-5127b1bad624
-begin
-	Ix = Integral(x in DomainSets.ClosedInterval(x_min, x))
-	Iy = Integral(y in DomainSets.ClosedInterval(y_min, y))
-end
-
 # ╔═╡ 60eac119-f4df-4588-9bca-20c4f8d577d5
-c₁ = Ix(Iy(u⁰(x, y) * H)) / Ix(Iy(H))
+c1 = Ix(Iy(u0_function(x, y) * H)) / Ix(Iy(H))
 
 # ╔═╡ 7d667b40-9685-4ba9-9513-2bb3f5e2c5aa
-c₂ = Ix(Iy(u⁰(x, y) * (1 - H))) / Ix(Iy((1 - H)))
+c2 = Ix(Iy(u0_function(x, y) * (1 - H))) / Ix(Iy((1 - H)))
 
-# ╔═╡ 17e6a3ca-f8cd-47e0-bb05-87d2d71ba92f
-cameraman = imresize(testimage("cameraman"), (x_max, y_max))
+# ╔═╡ 42813edf-a9e8-4e84-bf29-53e82103436d
+begin
+	nabla_phi = Symbolics.gradient(phi(x, y, t), [x, y])
+	nabla_phi_mag = √(nabla_phi[1] ^2 + nabla_phi[2]^2)
+	nabla_phi_norm = nabla_phi / nabla_phi_mag
+	div_phi = Dx(nabla_phi_norm[1]) + Dy(nabla_phi_norm[2])
+end
 
-# ╔═╡ d0b5faa8-2068-400c-b102-02a2bb788659
-u₀ = convert(Array{Float64}, imresize(testimage("cameraman"), (x_max, y_max)))
-
-# ╔═╡ 6acb33ca-ecad-4b04-a05f-691d88db73f8
-𝚽₀ = initial_level_set((x_max, y_max));
-
-# ╔═╡ d8d52e42-cd85-4e1f-95f6-4f12ce1ad42e
-itp = interpolate(𝚽₀, BSpline(Cubic(Line(OnGrid()))));
-
-# ╔═╡ 0134e1d8-ae85-4fca-8a53-d9585b2fc669
-𝚽₀itp = scale(itp, x_min:x_max, y_min:y_max);
-
-# ╔═╡ 47e88a28-dab5-4005-97e4-f03276a95d12
-𝚽₀_function(x, y) = 𝚽₀itp(x, y)
-
-# ╔═╡ 62b1de3f-927e-4eea-99b7-919d7bdeb132
-@register_symbolic 𝚽₀_function(x, y)
-
-# ╔═╡ 97b7451c-860b-4e52-bf09-326d5af9d714
+# ╔═╡ ea0502ba-80a3-48b9-9e00-afd36bebeb0c
 md"""
-## Set up PDE
+## PDE
 """
 
 # ╔═╡ 6e261bc6-6f76-495d-b2ba-9db923300a53
 const ν = 3
 
 # ╔═╡ 344545aa-cc71-4c8e-8834-7c0405475ae1
-eqs = [Dt(ϕ(x, y, t)) ~ δ * ((ν * div_ϕ) - (u⁰(x, y) - c₁)^2 + (u⁰(x, y) - c₂)^2)]
+eqs = [Dt(phi(x, y, t)) ~ δ * ((ν * div_phi) - (u0_function(x, y) - c1)^2 + (u0_function(x, y) - c2)^2)]
 
-# ╔═╡ c0265e2b-c8d9-4f2e-821b-f966d266cf6e
-bcs = [
-	ϕ(x, y, 0) ~ 𝚽₀_function(x, y), # this is saying that at time = 0, the intial level set (ϕ) is equal to our initial level set ϕ₀
-];
+# ╔═╡ 4d4a7ee9-556a-4694-b314-631c27ddf682
+md"""
+# PDESystem
+"""
+
+# ╔═╡ ce683bd1-74e3-4f23-87de-36f5fd8438c9
+md"""
+## Setup
+"""
 
 # ╔═╡ c6ebd33e-c80b-4612-814e-5a385ee382d7
 domains = [
 	t ∈ Interval(0.0, 1.0),
-	x ∈ Interval(x_min, x_max),
-	y ∈ Interval(y_min, y_max)
-]
+	x ∈ Interval(xmin, xmax),
+	y ∈ Interval(ymin, ymax)
+];
 
-# ╔═╡ b932f525-a8c1-4905-9ea2-2d5c00128f7c
-@named pde_system = PDESystem(eqs, bcs, domains, [x, y, t], [ϕ(x, y, t)])
+# ╔═╡ 10371189-e5ed-42ac-b400-f8e266df689a
+bcs = [
+	phi(x, y, 0) ~ phi0_function(x, y), # this is saying that at time = 0, the intial level set (ϕ) is equal to our initial level set ϕ₀
+];
+
+# ╔═╡ d0f24e8a-ff62-4c49-85b2-e04250098892
+@named pde_system = PDESystem(eqs, bcs, domains, [x, y, t], [phi(x, y, t)])
 
 # ╔═╡ 10df6e87-c92b-4cc6-92bd-72b3cd7f4467
 md"""
-# Discretize & Solve
+## Discretize and solve
 """
 
 # ╔═╡ a8ab49c0-aff6-49f4-9721-db9ef85a7e03
@@ -2805,39 +2834,42 @@ version = "3.5.0+0"
 
 # ╔═╡ Cell order:
 # ╟─fbaf4f1f-6221-4582-be41-d66eb43cdb18
-# ╟─4ac09a50-0da7-4473-9f7e-9dd52046b03c
-# ╟─d1a68855-999e-4740-87b7-f4dcc8af4982
+# ╟─da1aacd4-e1ae-4d2c-ac51-bb3869eecc96
 # ╠═5a5c84d9-5ea1-469d-ad5d-b0907b3d1aaa
 # ╠═bab08d75-1d40-4360-85e0-4d3eb87978d7
 # ╠═54632188-e083-4b53-b609-9be79de7ff34
 # ╠═b245b3e2-5760-4aa5-89a0-3a47450d628f
 # ╠═0aa2b8ff-fbb1-48cf-9c44-d18eb7be2db7
-# ╠═560a0369-7c1b-4282-8b00-5220e38e1320
-# ╠═1eff178c-3fe1-4d31-9b00-dd9e2a3256f2
-# ╟─90b63fc4-425d-4ec9-b92b-80cd66b75d3f
+# ╟─4ac09a50-0da7-4473-9f7e-9dd52046b03c
+# ╟─47ea8adf-ade1-407b-bd24-7db3d1774fd5
+# ╠═7bc85ee9-a3ac-4b46-94a1-3bd8710afa7b
+# ╠═dc2f2e91-b880-4070-8454-6305c361e681
+# ╟─ce6d3153-48f2-4b4e-ab43-5206f9e7ba6f
+# ╠═72ad3309-1e1c-4590-ad8d-27e71ada04d4
+# ╟─ad50879a-7f82-4c50-8e64-a3a8fe66ce0e
 # ╠═86744214-9b8f-4254-a4fe-71a5a69d8559
-# ╠═e9256a34-2dee-4677-9a50-5127b1bad624
+# ╠═694e0a90-8656-41ea-a7f1-04b9ded5a137
+# ╟─1efe9930-8528-4663-b01f-079b28492050
+# ╠═612f0dfe-3897-425d-9f92-dea8b14ee8c9
+# ╟─2135a86c-54a1-48d7-b117-798fb17fd721
+# ╠═0e21828f-508e-4df6-aa5d-6ed3c30f52ad
+# ╠═6e1cadde-29f1-4ead-9a1c-7fe8346edc1f
+# ╠═1eff178c-3fe1-4d31-9b00-dd9e2a3256f2
+# ╠═ec6351d5-f501-48b5-b73a-91371d70fb05
+# ╟─1b481d78-04fd-426f-ba1f-626e65326f6c
 # ╠═6243e189-83be-4098-ab92-0463fede4805
 # ╠═3e65b52f-0486-4713-9776-cd87dbb87b33
 # ╠═60eac119-f4df-4588-9bca-20c4f8d577d5
 # ╠═7d667b40-9685-4ba9-9513-2bb3f5e2c5aa
 # ╠═42813edf-a9e8-4e84-bf29-53e82103436d
-# ╟─e5156d66-f984-4986-841a-fb22af019c1d
-# ╟─6a867b02-bec7-411c-8c42-c1676cc5c3b9
-# ╠═c648a4fd-a7d2-481d-8085-ce7514bd867f
-# ╠═17e6a3ca-f8cd-47e0-bb05-87d2d71ba92f
-# ╠═d0b5faa8-2068-400c-b102-02a2bb788659
-# ╠═6acb33ca-ecad-4b04-a05f-691d88db73f8
-# ╠═d8d52e42-cd85-4e1f-95f6-4f12ce1ad42e
-# ╠═0134e1d8-ae85-4fca-8a53-d9585b2fc669
-# ╠═47e88a28-dab5-4005-97e4-f03276a95d12
-# ╠═62b1de3f-927e-4eea-99b7-919d7bdeb132
-# ╟─97b7451c-860b-4e52-bf09-326d5af9d714
+# ╟─ea0502ba-80a3-48b9-9e00-afd36bebeb0c
 # ╠═6e261bc6-6f76-495d-b2ba-9db923300a53
 # ╠═344545aa-cc71-4c8e-8834-7c0405475ae1
-# ╠═c0265e2b-c8d9-4f2e-821b-f966d266cf6e
+# ╟─4d4a7ee9-556a-4694-b314-631c27ddf682
+# ╟─ce683bd1-74e3-4f23-87de-36f5fd8438c9
 # ╠═c6ebd33e-c80b-4612-814e-5a385ee382d7
-# ╠═b932f525-a8c1-4905-9ea2-2d5c00128f7c
+# ╠═10371189-e5ed-42ac-b400-f8e266df689a
+# ╠═d0f24e8a-ff62-4c49-85b2-e04250098892
 # ╟─10df6e87-c92b-4cc6-92bd-72b3cd7f4467
 # ╠═a8ab49c0-aff6-49f4-9721-db9ef85a7e03
 # ╠═b785229a-f6b2-4554-95bd-6f439b5eb31b
